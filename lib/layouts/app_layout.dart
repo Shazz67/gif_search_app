@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../providers/connectivity_provider.dart';
+import '../providers/providers.dart';
 
 class AppLayout extends ConsumerStatefulWidget {
   final Widget child;

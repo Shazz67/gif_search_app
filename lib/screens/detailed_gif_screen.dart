@@ -3,11 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/gif_model.dart';
 import '../data/giphy_service.dart';
 import 'package:share_plus/share_plus.dart';
-import '../providers/connectivity_provider.dart';
+import '../providers/providers.dart';
 import 'package:lottie/lottie.dart';
 import '../widgets/network_image_with_placeholder.dart';
-import 'package:visibility_detector/visibility_detector.dart';
 import '../widgets/gradient_app_bar.dart';
+import '../widgets/gif_grid_item.dart';
+import '../widgets/error_message.dart';
 
 class DetailedGifScreen extends ConsumerStatefulWidget {
   final GifModel gif;
@@ -19,20 +20,24 @@ class DetailedGifScreen extends ConsumerStatefulWidget {
 }
 
 class _DetailedGifScreenState extends ConsumerState<DetailedGifScreen> {
+  late final GiphyService _giphyService;
   late List<GifModel> _relatedGifs;
   final ScrollController _scrollController = ScrollController();
   bool _isLoadingMore = false;
+  bool _isLoading = false;
   int _offset = 0;
   final int _limit = 16;
   final Set<String> _displayedGifs = {};
   bool _isReturningFromHero = false;
   String? _error;
+  String? _loadMoreError;
 
   bool? _previousConnectivity;
 
   @override
   void initState() {
     super.initState();
+    _giphyService = ref.read(giphyServiceProvider);
     _relatedGifs = [];
     _fetchRelatedGifs();
     _scrollController.addListener(_onScroll);
@@ -47,12 +52,14 @@ class _DetailedGifScreenState extends ConsumerState<DetailedGifScreen> {
   Future<void> _fetchRelatedGifs() async {
     if (!mounted) return;
     setState(() {
-      _isLoadingMore = true;
+      _isLoading = true;
+      _error = null;
+      _loadMoreError = null;
     });
 
     try {
-      final fetchedGifs = await GiphyService()
-          .searchGifs(widget.gif.title, offset: _offset, limit: _limit);
+      final fetchedGifs = await _giphyService.searchGifs(widget.gif.title,
+          offset: _offset, limit: _limit);
       if (!mounted) return;
       final parsedGifs =
           fetchedGifs.map((gif) => GifModel.fromJson(gif)).toList();
@@ -70,6 +77,7 @@ class _DetailedGifScreenState extends ConsumerState<DetailedGifScreen> {
       setState(() {
         _relatedGifs.addAll(filteredGifs);
         _offset += _limit;
+        _error = null;
       });
     } catch (e) {
       if (!mounted) return;
@@ -79,9 +87,49 @@ class _DetailedGifScreenState extends ConsumerState<DetailedGifScreen> {
     } finally {
       if (mounted) {
         setState(() {
-          _isLoadingMore = false;
+          _isLoading = false;
         });
       }
+    }
+  }
+
+  Future<void> _loadMoreRelatedGifs() async {
+    setState(() {
+      _isLoadingMore = true;
+      _loadMoreError = null;
+      _error = null;
+    });
+
+    try {
+      final fetchedGifs = await _giphyService.searchGifs(widget.gif.title,
+          offset: _offset, limit: _limit);
+      if (!mounted) return;
+      final parsedGifs =
+          fetchedGifs.map((gif) => GifModel.fromJson(gif)).toList();
+      parsedGifs.shuffle();
+
+      final filteredGifs =
+          parsedGifs.where((gif) => gif.id != widget.gif.id).toList();
+
+      if (filteredGifs.length == 16) {
+      } else if (filteredGifs.length == 15) {
+        filteredGifs.removeLast();
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _relatedGifs.addAll(filteredGifs);
+        _offset += _limit;
+        _loadMoreError = null;
+      });
+    } catch (e) {
+      setState(() {
+        _loadMoreError = 'Failed to load more related GIFs';
+      });
+    } finally {
+      setState(() {
+        _isLoadingMore = false;
+      });
     }
   }
 
@@ -89,7 +137,7 @@ class _DetailedGifScreenState extends ConsumerState<DetailedGifScreen> {
     if (_scrollController.position.pixels >=
             _scrollController.position.maxScrollExtent - 400 &&
         !_isLoadingMore) {
-      _fetchRelatedGifs();
+      _loadMoreRelatedGifs();
     }
   }
 
@@ -98,105 +146,40 @@ class _DetailedGifScreenState extends ConsumerState<DetailedGifScreen> {
         !_displayedGifs.contains(imageUrl) && !_isReturningFromHero;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _displayedGifs.add(imageUrl);
+      if (mounted) {
+        _displayedGifs.add(imageUrl);
+      }
     });
 
-    return VisibilityDetector(
-        key: Key(imageUrl),
-        onVisibilityChanged: (visibilityInfo) {
+    return GifGridItem(
+      gif: gif,
+      imageUrl: imageUrl,
+      heroTag: imageUrl,
+      shouldFadeIn: shouldFadeIn,
+      onTap: () {
+        setState(() {
+          _isReturningFromHero = true;
+        });
+        Navigator.of(context).pushNamed('/detailed', arguments: gif).then((_) {
           if (!mounted) return;
-
-          final visiblePercentage = visibilityInfo.visibleFraction * 100;
-          if (visiblePercentage > 0) {
-            setState(() {
-              _displayedGifs.add(imageUrl);
-            });
-          } else {
-            setState(() {
-              _displayedGifs.remove(imageUrl);
-            });
-          }
-        },
-        child: GestureDetector(
-          onTap: () {
-            setState(() {
-              _isReturningFromHero = true;
-            });
-            Navigator.of(context)
-                .pushNamed('/detailed', arguments: gif)
-                .then((_) {
-              if (!mounted) return;
-              setState(() {
-                _isReturningFromHero = false;
-              });
-            });
-          },
-          child: Hero(
-            tag: imageUrl,
-            child: NetworkImageWithPlaceholder(
-              imageUrl: imageUrl,
-              shouldFadeIn: shouldFadeIn,
-              borderRadius: BorderRadius.circular(12.0),
-            ),
-          ),
-        ));
-  }
-
-  AppBar buildGradientAppBar(BuildContext context) {
-    final title =
-        widget.gif.title.isNotEmpty ? widget.gif.title : 'Untitled GIF';
-
-    return AppBar(
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: Colors.white),
-        onPressed: () {
-          Navigator.pop(context);
-        },
-      ),
-      title: Transform.translate(
-        offset: const Offset(-18.0, 0.0),
-        child: ShaderMask(
-          shaderCallback: (Rect bounds) {
-            return const LinearGradient(
-              colors: [
-                Color.fromARGB(255, 255, 255, 255),
-                Color.fromARGB(255, 255, 255, 255),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ).createShader(bounds);
-          },
-          blendMode: BlendMode.srcIn,
-          child: Text(
-            title,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ),
-      centerTitle: false,
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      flexibleSpace: ClipRRect(
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(10.0),
-          bottomRight: Radius.circular(10.0),
-        ),
-        child: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Color.fromARGB(255, 255, 0, 93),
-                Color(0xFF3D3DFF),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
-      ),
+          setState(() {
+            _isReturningFromHero = false;
+          });
+        });
+      },
+      onVisibilityChanged: (visibilityInfo) {
+        if (!mounted) return;
+        final visiblePercentage = visibilityInfo.visibleFraction * 100;
+        if (visiblePercentage > 0) {
+          setState(() {
+            _displayedGifs.add(imageUrl);
+          });
+        } else {
+          setState(() {
+            _displayedGifs.remove(imageUrl);
+          });
+        }
+      },
     );
   }
 
@@ -208,6 +191,7 @@ class _DetailedGifScreenState extends ConsumerState<DetailedGifScreen> {
       if (_previousConnectivity == false && isConnected) {
         setState(() {
           _error = null;
+          _loadMoreError = null;
         });
         _fetchRelatedGifs();
       }
@@ -228,8 +212,24 @@ class _DetailedGifScreenState extends ConsumerState<DetailedGifScreen> {
       await _fetchRelatedGifs();
     }
 
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+
     return Scaffold(
-        appBar: buildGradientAppBar(context),
+        appBar: GradientAppBar(
+          title:
+              widget.gif.title.isNotEmpty ? widget.gif.title : 'Untitled GIF',
+          titleOffset: -18.0,
+          titleStyle: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+          height: Theme.of(context).appBarTheme.toolbarHeight ?? kToolbarHeight,
+          borderRadius: const BorderRadius.only(
+            bottomLeft: Radius.circular(10.0),
+            bottomRight: Radius.circular(10.0),
+          ),
+        ),
         body: Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -475,18 +475,20 @@ class _DetailedGifScreenState extends ConsumerState<DetailedGifScreen> {
                                 ),
                               ],
                             ),
+                            if (_isLoading)
+                              Center(
+                                child: SizedBox(
+                                  height: 45,
+                                  child: Lottie.asset(
+                                      'assets/animations/loading2.json'),
+                                ),
+                              ),
                             if (_error != null)
                               Padding(
-                                padding: const EdgeInsets.only(top: 10.0),
-                                child: Center(
-                                  child: Text(
-                                    _error!,
-                                    style: const TextStyle(
-                                      color: Color.fromARGB(255, 255, 19, 106),
-                                      fontSize: 16.0,
-                                    ),
-                                  ),
+                                padding: const EdgeInsets.only(
+                                  top: 10.0,
                                 ),
+                                child: ErrorMessage(message: _error!),
                               ),
                             const SizedBox(height: 8),
                             Padding(
@@ -497,8 +499,8 @@ class _DetailedGifScreenState extends ConsumerState<DetailedGifScreen> {
                                 shrinkWrap: true,
                                 physics: const NeverScrollableScrollPhysics(),
                                 gridDelegate:
-                                    const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 2,
+                                    SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: isLandscape ? 4 : 2,
                                   crossAxisSpacing: 10,
                                   mainAxisSpacing: 10,
                                 ),
@@ -520,12 +522,22 @@ class _DetailedGifScreenState extends ConsumerState<DetailedGifScreen> {
                                   child: SizedBox(
                                     height: 45,
                                     child: Lottie.asset(
-                                      'assets/loading2.json',
+                                      'assets/animations/loading2.json',
                                       fit: BoxFit.contain,
                                     ),
                                   ),
                                 ),
-                              )
+                              ),
+                            if (_loadMoreError != null)
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  bottom: 19.0,
+                                  top: 7.0,
+                                ),
+                                child: ErrorMessage(
+                                    message:
+                                        _loadMoreError!), // Safe now, because it's non-null
+                              ),
                           ],
                         ),
                       ),

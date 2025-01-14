@@ -3,14 +3,23 @@ import 'package:http/http.dart' as http;
 import 'dart:developer';
 
 class GiphyService {
-  final String apiKey = 'x7MAwKtWb0f2sJp8q34gLYvCIBWrGo2M';
-  final String baseUrl = 'https://api.giphy.com/v1/gifs';
+  final String apiKey;
+  final String baseUrl;
+  final http.Client client;
+
+  // Give defaults for apiKey, baseUrl, and
+  // let client default to a new http.Client if not supplied.
+  GiphyService({
+    this.apiKey = 'x7MAwKtWb0f2sJp8q34gLYvCIBWrGo2M',
+    this.baseUrl = 'https://api.giphy.com/v1/gifs',
+    http.Client? client,
+  }) : client = client ?? http.Client();
 
   Future<List<dynamic>> searchGifs(String query,
       {int offset = 0, int limit = 16}) async {
     log('Calling Giphy API with query: $query, offset: $offset, limit: $limit');
 
-    final response = await http.get(
+    final response = await client.get(
       Uri.parse(
         '$baseUrl/search?api_key=$apiKey&q=${Uri.encodeQueryComponent(query)}&limit=$limit&offset=$offset',
       ),
@@ -37,7 +46,7 @@ class GiphyService {
         ? ''
         : '&q=${Uri.encodeQueryComponent(category)}';
 
-    final response = await http.get(
+    final response = await client.get(
       Uri.parse(
           '$baseUrl/$endpoint?api_key=$apiKey&limit=$limit&offset=$offset$queryParam'),
     );

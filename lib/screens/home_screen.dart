@@ -3,12 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/giphy_service.dart';
 import '../models/gif_model.dart';
-import '../providers/connectivity_provider.dart';
+import '../providers/providers.dart';
 import 'package:lottie/lottie.dart';
 import 'package:visibility_detector/visibility_detector.dart';
-import '../widgets/network_image_with_placeholder.dart';
 import '../widgets/category_button.dart';
 import '../widgets/gradient_app_bar.dart';
+import '../widgets/gif_grid_item.dart';
+import '../widgets/error_message.dart';
+import '../widgets/search_bar.dart' as custom;
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -18,7 +20,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  final GiphyService _giphyService = GiphyService();
+  late final GiphyService _giphyService;
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
@@ -29,27 +31,54 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _isLoading = false;
   bool _isLoadingMore = false;
   String? _error;
+  String? _loadMoreError;
   int _offset = 0;
   Timer? _debounce;
   final int _limit = 16;
 
   bool? _previousConnectivity;
+  bool _hasProcessedTag = false;
 
   final List<String> _categories = [
     'Trending',
     'LOL',
     'Good morning',
     'Love you',
-    'Cats',
+    'Hug',
     'Happy',
     'Sad',
+    'Cats',
+    'Goodnight',
+    'Puppies',
+    'Dance',
+    'Annoyed'
   ];
 
   @override
   void initState() {
     super.initState();
-    _fetchGifsByCategory(_selectedCategory);
+    _giphyService = ref.read(giphyServiceProvider);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Delay the fetch logic until the widget is fully initialized.
+      final tagArgument = ModalRoute.of(context)?.settings.arguments as String?;
+      if (tagArgument != null) {
+        _processTagArgument(tagArgument);
+      } else {
+        _fetchGifsByCategory(_selectedCategory);
+      }
+    });
     _scrollController.addListener(_onScroll);
+  }
+
+  void _processTagArgument(String tag) {
+    setState(() {
+      _searchQuery = tag;
+      _searchController.text = tag;
+      _offset = 0;
+      _gifs = [];
+      _error = null; // Clear previous errors
+    });
+    _searchGifs(); // Trigger search for the tag
   }
 
   @override
@@ -103,6 +132,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     setState(() {
       _isLoading = true;
       _error = null;
+      _loadMoreError = null;
     });
     try {
       final gifs =
@@ -129,6 +159,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       if (mounted) {
         setState(() {
           _isLoadingMore = false;
+          _isLoading = false;
         });
       }
     }
@@ -139,6 +170,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     setState(() {
       _isLoading = true;
       _error = null;
+      _loadMoreError = null;
       _gifs = [];
     });
 
@@ -157,8 +189,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             .toList();
         setState(() {
           _error = null;
-        });
-        setState(() {
           _gifs = gifModels;
           _offset += _limit;
         });
@@ -172,6 +202,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       if (mounted) {
         setState(() {
           _isLoadingMore = false;
+          _isLoading = false;
         });
       }
     }
@@ -180,7 +211,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Future<void> _loadMoreGifs() async {
     setState(() {
       _isLoadingMore = true;
-      _error = null;
+      _loadMoreError = null;
     });
 
     try {
@@ -200,7 +231,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       }
     } catch (e) {
       setState(() {
-        _error = 'Failed to load more GIFs';
+        _loadMoreError = 'Failed to load more GIFs';
       });
     } finally {
       setState(() {
@@ -212,7 +243,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Future<void> _loadMoreCategoryGifs() async {
     setState(() {
       _isLoadingMore = true;
-      _error = null;
+      _loadMoreError = null;
     });
 
     try {
@@ -232,7 +263,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       }
     } catch (e) {
       setState(() {
-        _error = 'Failed to load more GIFs for $_selectedCategory';
+        _loadMoreError = 'Failed to load more GIFs for $_selectedCategory';
       });
     } finally {
       setState(() {
@@ -265,46 +296,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       _displayedGifs.add(imageUrl);
     });
 
-    final String heroTag = imageUrl;
-
-    return VisibilityDetector(
-        key: Key(imageUrl),
-        onVisibilityChanged: (visibilityInfo) {
-          if (!mounted) return;
-          final visiblePercentage = visibilityInfo.visibleFraction * 100;
-          if (visiblePercentage > 0) {
-            setState(() {
-              _displayedGifs.add(imageUrl);
-            });
-          } else {
-            setState(() {
-              _displayedGifs.remove(imageUrl);
-            });
-          }
-        },
-        child: GestureDetector(
-          onTap: () {
-            Navigator.of(context).pushNamed(
-              '/detailed',
-              arguments: gif,
-            );
-          },
-          child: Hero(
-            tag: heroTag,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12.0),
-              child: Stack(
-                children: [
-                  NetworkImageWithPlaceholder(
-                    imageUrl: imageUrl,
-                    shouldFadeIn: shouldFadeIn,
-                    borderRadius: BorderRadius.circular(12.0),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ));
+    return GifGridItem(
+      gif: gif,
+      imageUrl: imageUrl,
+      heroTag: imageUrl,
+      shouldFadeIn: shouldFadeIn,
+      onTap: () {
+        Navigator.of(context).pushNamed(
+          '/detailed',
+          arguments: gif,
+        );
+      },
+      onVisibilityChanged: (visibilityInfo) {
+        final visiblePercentage = visibilityInfo.visibleFraction * 100;
+        if (visiblePercentage > 0) {
+          _displayedGifs.add(imageUrl);
+        } else {
+          _displayedGifs.remove(imageUrl);
+        }
+      },
+    );
   }
 
   @override
@@ -316,6 +327,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         if (_searchQuery.isNotEmpty) {
           setState(() {
             _error = null;
+            _loadMoreError = null;
           });
 
           _searchGifs();
@@ -332,27 +344,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     });
 
     final tagArgument = ModalRoute.of(context)?.settings.arguments as String?;
-    if (tagArgument != null && tagArgument.isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_searchQuery != tagArgument) {
-          setState(() {
-            _isLoading = true;
-            _searchQuery = tagArgument;
-            _searchController.text = tagArgument;
-            _offset = 0;
-            _gifs = [];
-          });
-          _searchGifs().then((_) {
-            setState(() {
-              _isLoading = false;
-            });
-          }).catchError((_) {
-            setState(() {
-              _isLoading = false;
-            });
-          });
-        }
+    if (tagArgument != null && !_hasProcessedTag) {
+      setState(() {
+        _hasProcessedTag = true; // Mark tag as processed
+        _searchQuery = tagArgument;
+        _searchController.text = tagArgument;
+        _offset = 0;
+        _gifs = [];
       });
+      _searchGifs();
     }
 
     Future<void> refreshContent() async {
@@ -363,10 +363,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       }
     }
 
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+
     return Scaffold(
       appBar: GradientAppBar(
         title: 'GIFFY | GIFs for everybody',
         canPop: ModalRoute.of(context)?.canPop ?? false,
+        height: Theme.of(context).appBarTheme.toolbarHeight ?? kToolbarHeight,
       ),
       body: Container(
         decoration: const BoxDecoration(
@@ -387,55 +391,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 padding: const EdgeInsets.all(10.0),
                 child: SizedBox(
                   height: 44,
-                  child: TextField(
+                  child: custom.SearchBar(
                     controller: _searchController,
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: Colors.white,
-                      hintText: "What's on your mind?",
-                      hintStyle: const TextStyle(
-                        color: Color.fromARGB(255, 75, 78, 255),
-                        fontSize: 18,
-                      ),
-                      contentPadding: const EdgeInsets.only(
-                        left: 14,
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderSide: const BorderSide(
-                          color: Color.fromARGB(255, 152, 163, 255),
-                          width: 1,
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderSide: const BorderSide(
-                          color: Color.fromARGB(255, 77, 77, 240),
-                          width: 1,
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      suffixIcon: _searchController.text.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.clear,
-                                  color: Color.fromARGB(255, 75, 78, 255)),
-                              onPressed: () {
-                                setState(() {
-                                  _searchController.clear();
-                                  _searchQuery = '';
-                                  _gifs = [];
-                                  _fetchGifsByCategory(_selectedCategory);
-                                });
-                              },
-                            )
-                          : null,
-                    ),
+                    hintText: "What's on your mind?",
                     onChanged: _onSearchChanged,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      color: Colors.black,
-                    ),
-                    textAlignVertical: TextAlignVertical.center,
-                    textAlign: TextAlign.left,
+                    onClear: () {
+                      setState(() {
+                        _searchController.clear();
+                        _searchQuery = '';
+                        _gifs = [];
+                        _fetchGifsByCategory(_selectedCategory);
+                      });
+                    },
                   ),
                 ),
               ),
@@ -454,21 +421,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                   ),
                 ),
-              if (_error != null)
+              if (_error != null && _gifs.isEmpty)
                 Padding(
                   padding: const EdgeInsets.only(
                     top: 10.0,
-                    bottom: 10.0,
                   ),
-                  child: Center(
-                    child: Text(
-                      _error!,
-                      style: const TextStyle(
-                        color: Color.fromARGB(255, 255, 19, 106),
-                        fontSize: 16.0,
-                      ),
-                    ),
-                  ),
+                  child: ErrorMessage(message: _error!),
                 ),
               Expanded(
                 child: _isLoading && _gifs.isEmpty
@@ -479,7 +437,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             child: SizedBox(
                               height: 45,
                               child: Lottie.asset(
-                                'assets/loading.json',
+                                'assets/animations/loading.json',
                                 fit: BoxFit.contain,
                               ),
                             ),
@@ -500,8 +458,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               shrinkWrap: true,
                               physics: const NeverScrollableScrollPhysics(),
                               gridDelegate:
-                                  const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 2,
+                                  SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: isLandscape ? 4 : 2,
                                 crossAxisSpacing: 10,
                                 mainAxisSpacing: 10,
                               ),
@@ -523,11 +481,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 child: SizedBox(
                                   height: 45,
                                   child: Lottie.asset(
-                                    'assets/loading.json',
+                                    'assets/animations/loading.json',
                                     fit: BoxFit.contain,
                                   ),
                                 ),
                               ),
+                            ),
+                          if (_loadMoreError != null)
+                            Padding(
+                              padding: const EdgeInsets.only(
+                                bottom: 19.0,
+                                top: 7.0,
+                              ),
+                              child: ErrorMessage(
+                                  message:
+                                      _loadMoreError!), // Show load more error here
                             ),
                         ],
                       ),

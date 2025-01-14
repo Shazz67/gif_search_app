@@ -6,27 +6,38 @@ class GradientAppBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback? onBackPressed;
   final double titleOffset;
   final TextStyle? titleStyle;
+  final double height;
+  final BorderRadius? borderRadius;
 
   const GradientAppBar({
-    Key? key,
+    super.key,
     required this.title,
     this.canPop = true,
     this.onBackPressed,
-    this.titleOffset = -6.0,
+    this.titleOffset = -3.0,
     this.titleStyle,
-  }) : super(key: key);
+    this.height = kToolbarHeight,
+    this.borderRadius,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+
     return AppBar(
       leading: canPop
-          ? IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
-              onPressed: onBackPressed ?? () => Navigator.pop(context),
+          ? Transform.translate(
+              offset: Offset(
+                  0.0, isLandscape ? -7.0 : 2.0), // Dynamic offset for leading
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: onBackPressed ?? () => Navigator.pop(context),
+              ),
             )
           : null,
       title: Transform.translate(
-        offset: Offset(titleOffset, 0.0),
+        offset: Offset(titleOffset, isLandscape ? -6.0 : 0.0),
         child: ShaderMask(
           shaderCallback: (Rect bounds) {
             return const LinearGradient(
@@ -53,10 +64,7 @@ class GradientAppBar extends StatelessWidget implements PreferredSizeWidget {
       backgroundColor: Colors.transparent,
       elevation: 0,
       flexibleSpace: ClipRRect(
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(10.0),
-          bottomRight: Radius.circular(10.0),
-        ),
+        borderRadius: borderRadius ?? BorderRadius.zero,
         child: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
@@ -74,5 +82,5 @@ class GradientAppBar extends StatelessWidget implements PreferredSizeWidget {
   }
 
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+  Size get preferredSize => Size.fromHeight(height);
 }

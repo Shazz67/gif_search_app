@@ -44,6 +44,10 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+
+    final double toolbarHeight = isLandscape ? 34.0 : 44.0;
     return MaterialApp(
       title: 'GIFFY',
       theme: ThemeData(
@@ -51,11 +55,11 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color.fromARGB(255, 77, 41, 255),
         ),
-        appBarTheme: const AppBarTheme(
+        appBarTheme: AppBarTheme(
           backgroundColor: Colors.white,
           elevation: 0,
           scrolledUnderElevation: 0,
-          toolbarHeight: 44,
+          toolbarHeight: toolbarHeight,
         ),
         useMaterial3: true,
       ),
