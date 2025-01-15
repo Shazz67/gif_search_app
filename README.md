@@ -21,7 +21,7 @@ Flutter 3.27.1
 - ✅ Loading indicators
 - ✅ Error display
 
-## Bonus Points:
+## Bonus points:
 
 - ✅ Using a state management library - Riverpod
 - ✅ Using an understandable architecture pattern
