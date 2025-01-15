@@ -2,7 +2,7 @@
 
 Flutter 3.27.1
 
-## Technical Requirements:
+## Technical requirements:
 
 - ✅ Primary platforms - Android: Tested extensively
 - ➖ Primary platforms - iOS: Not tested. I did try to adjust the app for iOS however I could (for example, creating the app icons for iOS as well), but since I currently do not have access to an Apple device, testing the app on iOS becomes incredibly difficult. I did create an .ipa file of the app using CodeMagic, and then tried to test the app with Appium on AWS Device Farm, but I kept running into issues and after a long time trying decided that it would be better to just leave it be and explain my situation here. If I had access to an Apple device, I would have loved to test the app thoroughly.
@@ -21,7 +21,7 @@ Flutter 3.27.1
 - ✅ Loading indicators
 - ✅ Error display
 
-## Bonus points:
+## Bonus Points:
 
 - ✅ Using a state management library - Riverpod
 - ✅ Using an understandable architecture pattern
