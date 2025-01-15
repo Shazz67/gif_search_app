@@ -8,6 +8,7 @@ class GradientAppBar extends StatelessWidget implements PreferredSizeWidget {
   final TextStyle? titleStyle;
   final double height;
   final BorderRadius? borderRadius;
+  final Widget? actionIcon;
 
   const GradientAppBar({
     super.key,
@@ -18,6 +19,7 @@ class GradientAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.titleStyle,
     this.height = kToolbarHeight,
     this.borderRadius,
+    this.actionIcon,
   });
 
   @override
@@ -28,8 +30,7 @@ class GradientAppBar extends StatelessWidget implements PreferredSizeWidget {
     return AppBar(
       leading: canPop
           ? Transform.translate(
-              offset: Offset(
-                  0.0, isLandscape ? -7.0 : 2.0), // Dynamic offset for leading
+              offset: Offset(0.0, isLandscape ? -7.0 : 2.0),
               child: IconButton(
                 icon: const Icon(Icons.arrow_back, color: Colors.white),
                 onPressed: onBackPressed ?? () => Navigator.pop(context),
@@ -61,6 +62,14 @@ class GradientAppBar extends StatelessWidget implements PreferredSizeWidget {
         ),
       ),
       centerTitle: false,
+      actions: actionIcon != null
+          ? [
+              Transform.translate(
+                offset: Offset(0.0, isLandscape ? -7.0 : 0.0),
+                child: actionIcon!,
+              ),
+            ]
+          : null,
       backgroundColor: Colors.transparent,
       elevation: 0,
       flexibleSpace: ClipRRect(

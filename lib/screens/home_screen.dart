@@ -1,16 +1,16 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../data/giphy_service.dart';
+import '../services/giphy_service.dart';
 import '../models/gif_model.dart';
 import '../providers/providers.dart';
 import 'package:lottie/lottie.dart';
 import 'package:visibility_detector/visibility_detector.dart';
-import '../widgets/category_button.dart';
-import '../widgets/gradient_app_bar.dart';
-import '../widgets/gif_grid_item.dart';
-import '../widgets/error_message.dart';
-import '../widgets/search_bar.dart' as custom;
+import '../widgets/home/category_button.dart';
+import '../widgets/shared/gradient_app_bar.dart';
+import '../widgets/shared/gif_grid_item.dart';
+import '../widgets/shared/error_message.dart';
+import '../widgets/home/search_bar.dart' as custom;
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -59,7 +59,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     super.initState();
     _giphyService = ref.read(giphyServiceProvider);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Delay the fetch logic until the widget is fully initialized.
       final tagArgument = ModalRoute.of(context)?.settings.arguments as String?;
       if (tagArgument != null) {
         _processTagArgument(tagArgument);
@@ -76,9 +75,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       _searchController.text = tag;
       _offset = 0;
       _gifs = [];
-      _error = null; // Clear previous errors
+      _error = null;
     });
-    _searchGifs(); // Trigger search for the tag
+    _searchGifs();
   }
 
   @override
@@ -302,6 +301,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       heroTag: imageUrl,
       shouldFadeIn: shouldFadeIn,
       onTap: () {
+        FocusScope.of(context).unfocus();
         Navigator.of(context).pushNamed(
           '/detailed',
           arguments: gif,
@@ -346,7 +346,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final tagArgument = ModalRoute.of(context)?.settings.arguments as String?;
     if (tagArgument != null && !_hasProcessedTag) {
       setState(() {
-        _hasProcessedTag = true; // Mark tag as processed
+        _hasProcessedTag = true;
         _searchQuery = tagArgument;
         _searchController.text = tagArgument;
         _offset = 0;
@@ -366,141 +366,182 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
 
-    return Scaffold(
-      appBar: GradientAppBar(
-        title: 'GIFFY | GIFs for everybody',
-        canPop: ModalRoute.of(context)?.canPop ?? false,
-        height: Theme.of(context).appBarTheme.toolbarHeight ?? kToolbarHeight,
-      ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color.fromARGB(255, 255, 255, 255),
-              Color.fromARGB(255, 243, 241, 255),
-            ],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
+    return GestureDetector(
+      onTap: () {
+        FocusScope.of(context).unfocus();
+      },
+      child: Scaffold(
+        appBar: GradientAppBar(
+          title: 'GIFFY | GIFs for everybody',
+          canPop: ModalRoute.of(context)?.canPop ?? false,
+          height: Theme.of(context).appBarTheme.toolbarHeight ?? kToolbarHeight,
+          actionIcon: IconButton(
+            icon: const Icon(
+              Icons.settings,
+              color: Colors.white,
+            ),
+            onPressed: () {
+              Navigator.of(context).pushNamed('/settings');
+            },
           ),
         ),
-        child: RefreshIndicator(
-          onRefresh: refreshContent,
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(10.0),
-                child: SizedBox(
-                  height: 44,
-                  child: custom.SearchBar(
-                    controller: _searchController,
-                    hintText: "What's on your mind?",
-                    onChanged: _onSearchChanged,
-                    onClear: () {
-                      setState(() {
-                        _searchController.clear();
-                        _searchQuery = '';
-                        _gifs = [];
-                        _fetchGifsByCategory(_selectedCategory);
-                      });
-                    },
-                  ),
-                ),
-              ),
-              if (_searchQuery.isEmpty)
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(10.0, 0.0, 10.0, 10.0),
-                    child: Row(
-                      children: _categories
-                          .map((category) => Padding(
-                                padding: const EdgeInsets.only(right: 8),
-                                child: _buildCategoryButton(category),
-                              ))
-                          .toList(),
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Color.fromARGB(255, 255, 255, 255),
+                Color.fromARGB(255, 243, 241, 255),
+              ],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+          ),
+          child: RefreshIndicator(
+            onRefresh: refreshContent,
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(10.0),
+                  child: SizedBox(
+                    height: 44,
+                    child: custom.SearchBar(
+                      controller: _searchController,
+                      hintText: "What's on your mind?",
+                      onChanged: _onSearchChanged,
+                      onClear: () {
+                        setState(() {
+                          _searchController.clear();
+                          _searchQuery = '';
+                          _gifs = [];
+                          _fetchGifsByCategory(_selectedCategory);
+                        });
+                      },
                     ),
                   ),
                 ),
-              if (_error != null && _gifs.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(
-                    top: 10.0,
+                if (_searchQuery.isEmpty)
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(10.0, 0.0, 10.0, 10.0),
+                      child: Row(
+                        children: _categories
+                            .map((category) => Padding(
+                                  padding: const EdgeInsets.only(right: 8),
+                                  child: _buildCategoryButton(category),
+                                ))
+                            .toList(),
+                      ),
+                    ),
                   ),
-                  child: ErrorMessage(message: _error!),
-                ),
-              Expanded(
-                child: _isLoading && _gifs.isEmpty
-                    ? Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Center(
-                            child: SizedBox(
-                              height: 45,
-                              child: Lottie.asset(
-                                'assets/animations/loading.json',
-                                fit: BoxFit.contain,
-                              ),
-                            ),
-                          ),
-                        ],
-                      )
-                    : ListView(
-                        controller: _scrollController,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(
-                              10.0,
-                              0.0,
-                              10.0,
-                              10.0,
-                            ),
-                            child: GridView.builder(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              gridDelegate:
-                                  SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: isLandscape ? 4 : 2,
-                                crossAxisSpacing: 10,
-                                mainAxisSpacing: 10,
-                              ),
-                              itemCount: _gifs.length,
-                              itemBuilder: (context, index) {
-                                final gif = _gifs[index];
-                                final imageUrl = gif.images.fixedHeight.url;
-                                return _buildGifItem(imageUrl, gif);
-                              },
-                            ),
-                          ),
-                          if (_isLoadingMore)
-                            Transform.translate(
-                              offset: const Offset(0, -6.0),
-                              child: Padding(
-                                padding: const EdgeInsets.only(
-                                  bottom: 4.0,
+                if (_error != null && _gifs.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(
+                      top: 10.0,
+                    ),
+                    child: ErrorMessage(message: _error!),
+                  ),
+                Expanded(
+                  child: _isLoading && _gifs.isEmpty
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Center(
+                              child: SizedBox(
+                                height: 45,
+                                child: Lottie.asset(
+                                  'assets/animations/loading.json',
+                                  fit: BoxFit.contain,
                                 ),
-                                child: SizedBox(
-                                  height: 45,
-                                  child: Lottie.asset(
-                                    'assets/animations/loading.json',
-                                    fit: BoxFit.contain,
+                              ),
+                            ),
+                          ],
+                        )
+                      : ListView(
+                          controller: _scrollController,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(
+                                10.0,
+                                0.0,
+                                10.0,
+                                10.0,
+                              ),
+                              child: GridView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                gridDelegate:
+                                    SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: isLandscape ? 4 : 2,
+                                  crossAxisSpacing: 10,
+                                  mainAxisSpacing: 10,
+                                ),
+                                itemCount: _gifs.length,
+                                itemBuilder: (context, index) {
+                                  final gif = _gifs[index];
+                                  final imageUrl = gif.images.fixedHeight.url;
+                                  return _buildGifItem(imageUrl, gif);
+                                },
+                              ),
+                            ),
+                            if (_isLoadingMore)
+                              Transform.translate(
+                                offset: const Offset(0, -6.0),
+                                child: Padding(
+                                  padding: const EdgeInsets.only(
+                                    bottom: 4.0,
+                                  ),
+                                  child: SizedBox(
+                                    height: 45,
+                                    child: Lottie.asset(
+                                      'assets/animations/loading.json',
+                                      fit: BoxFit.contain,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                          if (_loadMoreError != null)
-                            Padding(
-                              padding: const EdgeInsets.only(
-                                bottom: 19.0,
-                                top: 7.0,
+                            if (_loadMoreError != null)
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  bottom: 19.0,
+                                  top: 7.0,
+                                ),
+                                child: ErrorMessage(message: _loadMoreError!),
                               ),
-                              child: ErrorMessage(
-                                  message:
-                                      _loadMoreError!), // Show load more error here
-                            ),
-                        ],
-                      ),
+                          ],
+                        ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        floatingActionButton: SizedBox(
+          width: 72.0,
+          height: 72.0,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20.0),
+              gradient: const LinearGradient(
+                colors: [
+                  Color.fromARGB(255, 255, 0, 93),
+                  Color(0xFF3D3DFF),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-            ],
+            ),
+            child: FloatingActionButton(
+              onPressed: () {
+                Navigator.of(context).pushNamed('/add_gif');
+              },
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              child: const Icon(
+                Icons.add_circle,
+                color: Colors.white,
+                size: 50.0,
+              ),
+            ),
           ),
         ),
       ),

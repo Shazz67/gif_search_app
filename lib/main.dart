@@ -4,6 +4,8 @@ import 'layouts/app_layout.dart';
 import 'screens/home_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/detailed_gif_screen.dart';
+import 'screens/add_gif_screen.dart';
+import 'screens/settings_screen.dart';
 import 'models/gif_model.dart';
 import 'routes/custom_transition_route.dart';
 
@@ -28,6 +30,16 @@ class NavigationCoordinator {
         final gif = settings.arguments as GifModel;
         return CustomPageRoute(
           builder: (_) => DetailedGifScreen(gif: gif),
+          settings: settings,
+        );
+      case '/add_gif':
+        return CustomPageRoute(
+          builder: (_) => const AddGifScreen(),
+          settings: settings,
+        );
+      case '/settings':
+        return CustomPageRoute(
+          builder: (_) => const SettingsScreen(),
           settings: settings,
         );
       default:

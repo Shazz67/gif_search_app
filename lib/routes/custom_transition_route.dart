@@ -40,7 +40,8 @@ class CustomPageRoute<T> extends MaterialPageRoute<T> {
       ),
     );
 
-    // for the new page, we fade in and scale in, for the old page we scale up
+    // for the new page, we fade in and scale in, for the old page we only scale up
+    // it is a better transition visually, I don't like how the bottom can be seen when transitioning but it's better than how a fade in effect with the old page messes up the top
     return AnimatedBuilder(
       animation: secondaryAnimation,
       builder: (context, _) {

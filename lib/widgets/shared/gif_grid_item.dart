@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:visibility_detector/visibility_detector.dart';
-import '../models/gif_model.dart';
-import '../widgets/network_image_with_placeholder.dart';
+import '../../models/gif_model.dart';
+import 'network_image_with_placeholder.dart';
 
 class GifGridItem extends StatelessWidget {
   final GifModel gif;

@@ -7,8 +7,6 @@ class GiphyService {
   final String baseUrl;
   final http.Client client;
 
-  // Give defaults for apiKey, baseUrl, and
-  // let client default to a new http.Client if not supplied.
   GiphyService({
     this.apiKey = 'x7MAwKtWb0f2sJp8q34gLYvCIBWrGo2M',
     this.baseUrl = 'https://api.giphy.com/v1/gifs',

@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/gif_model.dart';
-import '../data/giphy_service.dart';
+import '../services/giphy_service.dart';
 import 'package:share_plus/share_plus.dart';
 import '../providers/providers.dart';
 import 'package:lottie/lottie.dart';
-import '../widgets/network_image_with_placeholder.dart';
-import '../widgets/gradient_app_bar.dart';
-import '../widgets/gif_grid_item.dart';
-import '../widgets/error_message.dart';
+import '../widgets/shared/network_image_with_placeholder.dart';
+import '../widgets/shared/gradient_app_bar.dart';
+import '../widgets/shared/gif_grid_item.dart';
+import '../widgets/shared/error_message.dart';
 
 class DetailedGifScreen extends ConsumerStatefulWidget {
   final GifModel gif;
@@ -534,9 +534,7 @@ class _DetailedGifScreenState extends ConsumerState<DetailedGifScreen> {
                                   bottom: 19.0,
                                   top: 7.0,
                                 ),
-                                child: ErrorMessage(
-                                    message:
-                                        _loadMoreError!), // Safe now, because it's non-null
+                                child: ErrorMessage(message: _loadMoreError!),
                               ),
                           ],
                         ),
