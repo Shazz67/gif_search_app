@@ -4,29 +4,29 @@ Flutter 3.27.1
 
 ## Technical Requirements:
 
-- ✅ Primary platforms - Android (tested extensively)
-- ➖ Primary platforms - iOS (not tested). I did try to adjust the app for iOS however I could (for example, creating the app icons for iOS as well), but since I currently do not have access to an Apple device, testing the app on iOS becomes incredibly difficult. I did create an .ipa file of the app using CodeMagic, and then tried to test the app with Appium on AWS Device Farm, but I kept running into issues and after a long time trying decided that it would be better to just leave it be and explain my situation here.
-- ✅ Auto search - requests to retrieve Gif information from the service are made automatically with a small delay after user stops typing
-- ✅ Pagination - loading more results when scrolling
+- ✅ Primary platforms - Android: Tested extensively
+- ➖ Primary platforms - iOS: Not tested. I did try to adjust the app for iOS however I could (for example, creating the app icons for iOS as well), but since I currently do not have access to an Apple device, testing the app on iOS becomes incredibly difficult. I did create an .ipa file of the app using CodeMagic, and then tried to test the app with Appium on AWS Device Farm, but I kept running into issues and after a long time trying decided that it would be better to just leave it be and explain my situation here.
+- ✅ Auto search: requests to retrieve Gif information from the service are made automatically with a small delay after user stops typing
+- ✅ Pagination: loads more results when scrolling
 - ✅ Vertical & horizontal orientation support
 - ✅ Error handling
-- ✅ Unit tests - as much as you see fit
+- ✅ 12 unit tests
 
 ## UI:
 
-- ✅ Responsive & matching platform guidelines;
-- ✅ At least 2 views sourced by data from Giphy;
-- ✅ Results are displayed in a grid;
-- ✅ Clicking on a grid item should navigate to a detailed Gif view.
-- ✅ Loading indicators;
-- ✅ Error display;
+- ✅ Responsive & matching platform guidelines
+- ✅ 2 views sourced by data from Giphy
+- ✅ Results are displayed in a grid
+- ✅ Clicking on a grid item navigates to a detailed Gif view
+- ✅ Loading indicators
+- ✅ Error display
 
 ## Bonus points:
 
-- ✅ Using a state management library - Riverpod;
-- ✅ Using an understandable architecture pattern;
-- ✅ Page navigation is separate from page widget code;
-- ✅ Network availability handling;
+- ✅ Using a state management library - Riverpod
+- ✅ Using an understandable architecture pattern
+- ✅ Page navigation is separate from page widget code
+- ✅ Network availability handling
 
 ## About my experience developing the app:
 
